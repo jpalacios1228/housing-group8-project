@@ -10,6 +10,8 @@ chosen this data set since it would give us a picture on how much house prices h
 changed compared to the income of the buyer throughout the years. The results of the
 project should give a clear idea on what houses to buy if it is possible to buy them
 
+Team Contributions:
+  - Writing Documentation & Project Report -> Jonathan Maldonado
 Team Member Contributions:
 
 Jaydin Soto: Building the Streamlit application (Transfering code to streamlit)
