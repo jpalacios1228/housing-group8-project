@@ -12,3 +12,12 @@ project should give a clear idea on what houses to buy if it is possible to buy 
 
 Team Contributions:
   - Writing Documentation & Project Report -> Jonathan Maldonado
+Team Member Contributions:
+
+Jaydin Soto: Building the Streamlit application (Transfering code to streamlit)
+
+Arian Milicija
+Project: Housing Group 8 Project
+Contribution: Create and implement MATLAB code used to process and analyze the housing data. That includes everything from loading datasets, using MATLAB to clean, organize, and visualize data, to help identify patterns, and generate plots/visuals. 
+Tools/Skills: MATLAB, data analysis, and visualization.
+
