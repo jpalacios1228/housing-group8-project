@@ -52,28 +52,6 @@ except Exception as e:
     st.error(f"❌ Import failed: {e}")
     st.code(traceback.format_exc())
 
-# Test data file access
-st.subheader("📊 Testing Data File Access")
-try:
-    # Check if data files exist
-    data_files = [
-        "data/MacroFactors.xlsx",
-        "data/HPI_master.csv",
-        "data/HPI_master.xlsx",
-        "data/HPI_AT_BDL_counties.xlsx",
-        "data/HPI_AT_BDL_states.xlsx",
-        "data/HPI_AT_BDL_US.xlsx"
-    ]
-    
-    for file_path in data_files:
-        if os.path.exists(file_path):
-            st.success(f"✓ Found: {file_path}")
-        else:
-            st.error(f"❌ Missing: {file_path}")
-            
-except Exception as e:
-    st.error(f"Error checking data files: {e}")
-
 st.success("🔧 Debug complete - check above for issues!")
 
 import python_files.Annual_Macroeconomic_Factors as MacroF
