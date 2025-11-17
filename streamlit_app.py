@@ -1,25 +1,28 @@
 import streamlit as st
+import os
 
-st.set_page_config(layout="wide")
-st.title("Debug - App is loading")
+st.title("File Path Debugger")
 
+# Show current working directory
+st.write("Current working directory:", os.getcwd())
+
+# List all files in current directory
+st.write("Files in current directory:")
+for file in os.listdir("."):
+    st.write(f"- {file}")
+
+# List files in python_files directory
+if os.path.exists("python_files"):
+    st.write("Files in python_files directory:")
+    for file in os.listdir("python_files"):
+        st.write(f"- {file}")
+
+# Now try your imports with error handling
 try:
-    st.write("✓ Streamlit is working")
-    import pandas as pd
-    st.write("✓ Pandas imported")
-    import openpyxl
-    st.write("✓ Openpyxl imported")
-    
-    # Test your imports one by one
-    from python_files.Annual_Macroeconomic_Factors import *
-    st.write("✓ Custom modules imported")
-    
-    st.success("All imports successful!")
-    
+    import python_files.Annual_Macroeconomic_Factors as MacroF
+    st.success("✓ Successfully imported MacroF")
 except Exception as e:
-    st.error(f"Error at: {str(e)}")
-    import traceback
-    st.code(traceback.format_exc())
+    st.error(f"Import failed: {e}")
 
 import python_files.Annual_Macroeconomic_Factors as MacroF
 import python_files.Housing as Housing
