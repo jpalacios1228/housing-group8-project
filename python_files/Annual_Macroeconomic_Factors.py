@@ -9,17 +9,7 @@ import os
 file = "Annual_Macroeconomic_Factors.xlsx"
 sheet = "in"
 
-#T = pd.read_excel(file, sheet_name=sheet)
-import os
-
-# Use relative path that works in Streamlit Cloud
-file_path = "data/MacroFactors.xlsx"
-if os.path.exists(file_path):
-    T = pd.read_excel(file_path, sheet_name=sheet)
-else:
-    # Fallback for different path structures
-    file_path = "../data/MacroFactors.xlsx"
-    T = pd.read_excel(file_path, sheet_name=sheet) 
+T = pd.read_excel(file, sheet_name=sheet)
 
 # Ensure Date is datetime
 if not np.issubdtype(T["Date"].dtype, np.datetime64):
