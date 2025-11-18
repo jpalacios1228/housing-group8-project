@@ -34,20 +34,27 @@ try:
     # Try importing
     import python_files.Annual_Macroeconomic_Factors as MacroF
     st.success("✓ Successfully imported Annual_Macroeconomic_Factors")
+    except Exception as e:
+    st.error(f"Error loading file: {e}")
 
     import python_files.Housing as Housing
     st.success("✓ Successfully imported Housing")
+    except Exception as e:
+    st.error(f"Error loading file: {e}")
 
     import python_files.Population_report as Population
     st.success("✓ Successfully imported Population_report")
+    except Exception as e:
+    st.error(f"Error loading file: {e}")
 
     import python_files.poverty_report as Poverty
     st.success("✓ Successfully imported poverty_report")
+    except Exception as e:
+    st.error(f"Error loading file: {e}")
 
     import python_files.Unemployment as Unemployment
     st.success("✓ Successfully imported Unemployment")
-
-except Exception as e:
+    except Exception as e:
     st.error(f"Error loading file: {e}")
 
 # Test data file access
