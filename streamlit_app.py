@@ -34,23 +34,6 @@ try:
     # Try importing
     import python_files.Annual_Macroeconomic_Factors as MacroF
     st.success("✓ Successfully imported Annual_Macroeconomic_Factors")
-    
-    # If you have other modules, test them too
-    try:
-        import python_files.HPI_Data as HPI
-        st.success("✓ Successfully imported HPI_Data")
-    except Exception as e:
-        st.warning(f"HPI_Data import: {e}")
-        
-    try:
-        import python_files.US_Housing_Affordability_Index as Affordability
-        st.success("✓ Successfully imported US_Housing_Affordability_Index")
-    except Exception as e:
-        st.warning(f"Affordability import: {e}")
-        
-except Exception as e:
-    st.error(f"❌ Import failed: {e}")
-    st.code(traceback.format_exc())
 
 # Test data file access
 st.subheader("📊 Testing Data File Access")
