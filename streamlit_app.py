@@ -57,12 +57,11 @@ st.subheader("📊 Testing Data File Access")
 try:
     # Check if data files exist
     data_files = [
-        "data/MacroFactors.xlsx",
-        "data/HPI_master.csv",
-        "data/HPI_master.xlsx",
-        "data/HPI_AT_BDL_counties.xlsx",
-        "data/HPI_AT_BDL_states.xlsx",
-        "data/HPI_AT_BDL_US.xlsx"
+        "Annual_Macroeconomic_Factors.xlsx",
+        "Housing.xlsx",
+        "PopulationReport.xlsx",
+        "PovertyReport.xlsx",
+        "UnemploymentReport.xlsx",
     ]
     
     for file_path in data_files:
