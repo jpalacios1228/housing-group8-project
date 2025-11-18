@@ -35,6 +35,18 @@ try:
     import python_files.Annual_Macroeconomic_Factors as MacroF
     st.success("✓ Successfully imported Annual_Macroeconomic_Factors")
 
+    import python_files.Housing as Housing
+    st.success("✓ Successfully imported Housing")
+
+    import python_files.Population_report as Population
+    st.success("✓ Successfully imported Population_report")
+
+    import python_files.poverty_report as Poverty
+    st.success("✓ Successfully imported poverty_report")
+
+    import python_files.Unemployment as Unemployment
+    st.success("✓ Successfully imported Unemployment")
+
 # Test data file access
 st.subheader("📊 Testing Data File Access")
 try:
