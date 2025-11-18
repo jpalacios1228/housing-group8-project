@@ -47,6 +47,9 @@ try:
     import python_files.Unemployment as Unemployment
     st.success("✓ Successfully imported Unemployment")
 
+except Exception as e:
+    st.error(f"Error loading file: {e}")
+
 # Test data file access
 st.subheader("📊 Testing Data File Access")
 try:
