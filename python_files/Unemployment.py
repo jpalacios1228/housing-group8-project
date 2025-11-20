@@ -194,7 +194,7 @@ if name_idx is None:
     plt.savefig(bar_path)
     plt.close()
 
-    return U, hist_path, bar_path
+return U, hist_path, bar_path
     
 if __name__ == "__main__":
     main()
