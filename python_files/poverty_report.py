@@ -107,19 +107,26 @@ def main():
 
     data.columns = new_cols
 
-    # =============================
+       # =============================
     # 4. Identify needed columns
     # =============================
-    lcols = [c.lower() for c in new_cols]
 
-    # Name
-    name_idx = next((i for i, c in enumerate(lcols) if "name" in c), None)
+    # Convert to pandas Series so .str works
+    lcols = pd.Series(new_cols).str.lower()
+
+    # ----- Find Name column -----
+    name_idx = None
+    for pattern in ["name", "state", "region", "area", "geo"]:
+        matches = lcols.str.contains(pattern, na=False)
+        if matches.any():
+            name_idx = matches.argmax()
+            break
+
     if name_idx is None:
-        raise ValueError('Could not find "Name" column.')
+        raise ValueError('Could not find a "Name" column.')
 
-    # Percent columns
-    percent_idx = [i for i, c in enumerate(lcols) if "percent" in c]
-    percent_idx.sort()
+    # ----- Find Percent columns -----
+    percent_idx = list(lcols[lcols.str.contains("percent", na=False)].index)
 
     if len(percent_idx) < 2:
         raise ValueError("Expected at least two 'Percent' columns.")
@@ -127,19 +134,19 @@ def main():
     idx_all_percent = percent_idx[0]
     idx_child_percent = percent_idx[1]
 
-    # Lower / Upper bounds
-    lb_idx = [i for i, c in enumerate(lcols) if "lower" in c]
-    ub_idx = [i for i, c in enumerate(lcols) if "upper" in c]
-    lb_idx.sort()
-    ub_idx.sort()
+    # ----- Lower/Upper bound detection -----
+    lb_idx = list(lcols[lcols.str.contains("lower", na=False)].index)
+    ub_idx = list(lcols[lcols.str.contains("upper", na=False)].index)
 
+    # Match LB/UB that occur AFTER their corresponding percent column
     idx_all_lb = next((i for i in lb_idx if i > idx_all_percent), None)
     idx_all_ub = next((i for i in ub_idx if i > idx_all_percent), None)
     idx_ch_lb = next((i for i in lb_idx if i > idx_child_percent), None)
     idx_ch_ub = next((i for i in ub_idx if i > idx_child_percent), None)
 
+    # Verify matches
     if None in [idx_all_lb, idx_all_ub, idx_ch_lb, idx_ch_ub]:
-        raise ValueError("Could not match LB/UB with Percent columns.")
+        raise ValueError("Could not match LB/UB columns to Percent columns.")
 
     # =============================
     # 5. Build cleaned table U
