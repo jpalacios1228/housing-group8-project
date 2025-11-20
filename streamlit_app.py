@@ -47,7 +47,7 @@ try:
     import python_files.Unemployment as Unemployment
     st.success("✓ Successfully imported Unemployment")
 
-    except Exception as e:
+except Exception as e:
     st.error(f"❌ Import error: {e}")
     st.code(traceback.format_exc())
 
