@@ -6,76 +6,81 @@ import traceback
 st.set_page_config(layout="wide")
 st.title("Housing Market Analysis - Debug Mode")
 
-# Debug: Show current directory structure
+# Make sure python_files is importable
+sys.path.append("python_files")
+
+# Debug: Show directory structure
 st.subheader("📁 Current Directory Structure")
 try:
     for root, dirs, files in os.walk("."):
-        # Skip hidden directories like .git
-        if '/.' in root:
+        if "/." in root:
             continue
-        level = root.replace(".", "").count(os.sep)
-        indent = " " * 2 * level
-        st.write(f"{indent}📁 {os.path.basename(root)}/")
-        sub_indent = " " * 2 * (level + 1)
-        for file in files[:10]:  # Limit to first 10 files per directory
-            if file.endswith(('.py', '.txt', '.xlsx', '.csv')):
-                st.write(f"{sub_indent}📄 {file}")
+        st.write(f"📁 {root}")
+        for file in files:
+            st.write(f" - {file}")
 except Exception as e:
     st.error(f"Error listing directory: {e}")
 
-# Try to import your modules
+# Test imports
 st.subheader("🔄 Testing Imports")
 try:
-    # Add python_files to path
-    sys.path.append('python_files')
-    
-    st.write("✓ Python path updated")
-    
-    # Try importing
     import python_files.Annual_Macroeconomic_Factors as MacroF
-    st.success("✓ Successfully imported Annual_Macroeconomic_Factors")
+    st.success("Imported Annual_Macroeconomic_Factors")
 
     import python_files.Housing as Housing
-    st.success("✓ Successfully imported Housing")
+    st.success("Imported Housing")
 
     import python_files.Population_report as Population
-    st.success("✓ Successfully imported Population_report")
+    st.success("Imported Population_report")
 
     import python_files.poverty_report as Poverty
-    st.success("✓ Successfully imported poverty_report")
+    st.success("Imported poverty_report")
 
     import python_files.Unemployment as Unemployment
-    st.success("✓ Successfully imported Unemployment")
+    st.success("Imported Unemployment")
 
 except Exception as e:
-    st.error(f"❌ Import error: {e}")
+    st.error("❌ Import failed")
     st.code(traceback.format_exc())
 
-# Test data file access
+# Test data files
 st.subheader("📊 Testing Data File Access")
-try:
-    # Check if data files exist
-    data_files = [
-        "Annual_Macroeconomic_Factors.xlsx",
-        "Housing.xlsx",
-        "PopulationReport.xlsx",
-        "PovertyReport.xlsx",
-        "UnemploymentReport.xlsx",
-    ]
-    
-    for file_path in data_files:
-        if os.path.exists(file_path):
-            st.success(f"✓ Found: {file_path}")
-        else:
-            st.error(f"❌ Missing: {file_path}")
-            
-except Exception as e:
-    st.error(f"Error checking data files: {e}")
+data_files = [
+    "Annual_Macroeconomic_Factors.xlsx",
+    "Housing.xlsx",
+    "PopulationReport.xlsx",
+    "PovertyReport.xlsx",
+    "UnemploymentReport.xlsx",
+]
 
-st.success("🔧 Debug complete - check above for issues!")
+for file in data_files:
+    if os.path.exists(file):
+        st.success(f"Found: {file}")
+    else:
+        st.error(f"Missing: {file}")
 
-#import python_files.Annual_Macroeconomic_Factors as MacroF
-#import python_files.Housing as Housing
-#import python_files.Population_report as Population
-#import python_files.poverty_report as Poverty
-#import python_files.Unemployment as Unemployment
+# RUN MODULE FUNCTIONS (if available)
+st.subheader("🚀 Running Module Functions")
+
+def try_run(name, module, func):
+    """Helper to safely run a module function"""
+    if hasattr(module, func):
+        try:
+            st.write(f"Running `{name}.{func}()`...")
+            result = getattr(module, func)()
+            st.success(f"✔ {name}.{func}() ran successfully")
+            return result
+        except Exception as e:
+            st.error(f"❌ Error running {name}.{func}()")
+            st.code(traceback.format_exc())
+    else:
+        st.warning(f"⚠ {name} has no function named `{func}`")
+
+# Run load_data() if exists
+macro_df = try_run("MacroF", MacroF, "load_data")
+housing_df = try_run("Housing", Housing, "load_data")
+population_df = try_run("Population", Population, "load_data")
+poverty_df = try_run("Poverty", Poverty, "load_data")
+unemp_df = try_run("Unemployment", Unemployment, "load_data")
+
+st.success("🔧 Debug complete!")
