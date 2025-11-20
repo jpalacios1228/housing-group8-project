@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 
-def run_unemployment():
+def main():
     """Run the UnemploymentReport cleaning and analysis."""
 
     # Configuration
@@ -193,8 +193,6 @@ def run_unemployment():
     plt.close()
 
     return U, hist_path, bar_path
-
-
-# DO NOT AUTORUN WHEN IMPORTED INTO STREAMLIT
+    
 if __name__ == "__main__":
-    run_unemployment()
+    main()
