@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 
-def run_poverty():
+def main():
     """Cleans the PovertyReport and generates figures (Streamlit-safe)."""
 
     in_file = "PovertyReport.xlsx"
@@ -226,6 +226,5 @@ def run_poverty():
     return U, hist_all_path, hist_child_path, top10_path, scatter_path
 
 
-# Prevent auto-execution when importing into Streamlit
 if __name__ == "__main__":
-    run_poverty()
+    main()
