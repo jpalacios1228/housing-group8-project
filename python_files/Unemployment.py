@@ -97,19 +97,21 @@ def main():
     data.columns = names
 
     # Find name column
-    lv = data.columns.str.lower()
-    name_idx = None
-    for pattern in ["name", "state", "region", "area", "geo"]:
-        matches = lv.str.contains(pattern)
-        if matches.any():
-            name_idx = matches.argmax()
-            break
+lv = pd.Series(data.columns).str.lower()   # turn into Series so .str works
+name_idx = None
 
-    if name_idx is None:
-        name_idx = 0
-        cols = data.columns.tolist()
-        cols[0] = "Name"
-        data.columns = cols
+for pattern in ["name", "state", "region", "area", "geo"]:
+    matches = lv.str.contains(pattern, na=False)
+    if matches.any():
+        name_idx = matches.argmax()   # correct for Series
+        break
+
+if name_idx is None:
+    name_idx = 0
+    cols = data.columns.tolist()
+    cols[0] = "Name"
+    data.columns = cols
+
 
     # Build U table
     U = pd.DataFrame()
