@@ -2,146 +2,122 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import streamlit as st
 
-# ---------------------------------------------------------
-# 1) Load dataset
-# ---------------------------------------------------------
-file = "Annual_Macroeconomic_Factors.xlsx"
-sheet = "in"
+# =========================================================
+# 1) Function: Load and clean dataset
+# =========================================================
+def load_data():
+    file = "Annual_Macroeconomic_Factors.xlsx"
+    sheet = "in"
 
-T = pd.read_excel(file, sheet_name=sheet)
+    # Load excel file
+    T = pd.read_excel(file, sheet_name=sheet)
 
-# Ensure Date is datetime
-if not np.issubdtype(T["Date"].dtype, np.datetime64):
-    try:
-        T["Date"] = pd.to_datetime(T["Date"])
-    except:
-        T["Date"] = pd.to_datetime(T["Date"], format="%Y-%m-%d")
+    # Ensure Date is datetime
+    if not np.issubdtype(T["Date"].dtype, np.datetime64):
+        try:
+            T["Date"] = pd.to_datetime(T["Date"])
+        except:
+            T["Date"] = pd.to_datetime(T["Date"], format="%Y-%m-%d")
 
-# ---------------------------------------------------------
-# 2) Handle missing/invalid values
-# ---------------------------------------------------------
-numVars = [c for c in T.columns if c != "Date"]
+    # Clean numeric variables
+    numVars = [c for c in T.columns if c != "Date"]
+    for col in numVars:
+        if T[col].dtype == object:
+            T[col] = pd.to_numeric(T[col], errors="coerce")
 
-# Convert string-like numeric fields
-for col in numVars:
-    if T[col].dtype == object:
-        T[col] = pd.to_numeric(T[col], errors="coerce")
+    # Remove rows where all numeric values are missing
+    allNumMissing = T[numVars].isna().all(axis=1)
+    Tclean = T[~allNumMissing].copy()
 
-# Drop rows where all numerical variables are missing
-allNumMissing = T[numVars].isna().all(axis=1)
-Tclean = T[~allNumMissing].copy()
+    # Add decade column
+    Tclean["Decade"] = (Tclean["Date"].dt.year // 10) * 10
 
-# ---------------------------------------------------------
-# 3) Summary statistics
-# ---------------------------------------------------------
-varsForStats = [
-    "House_Price_Index",
-    "Mortgage_Rate",
-    "Unemployment_Rate",
-    "Real_Disposable_Income",
-    "Real_GDP"
-]
+    # Save cleaned data
+    os.makedirs("output", exist_ok=True)
+    Tclean.to_csv("output/Annual_Macro_Clean.csv", index=False)
 
-print("=== Summary Statistics (ignoring missing) ===")
+    return Tclean
 
-for v in varsForStats:
-    x = Tclean[v].dropna()
-    if len(x) == 0:
-        continue
 
-    print(f"\nVariable: {v}")
-    print(f"  Count: {x.count()}")
-    print(f"  Mean: {x.mean():.4f}")
-    print(f"  Std:  {x.std():.4f}")
-    print(f"  Min:  {x.min():.4f}")
-    print(f"  Med:  {x.median():.4f}")
-    print(f"  Max:  {x.max():.4f}")
-    print(f"  Sum:  {x.sum():.4f}")
+# =========================================================
+# 2) Function: Make Streamlit plots
+# =========================================================
+def make_plots(Tclean):
+    st.subheader("📈 Annual Macroeconomic Trends")
 
-# ---------------------------------------------------------
-# 4) Decadal grouping
-# ---------------------------------------------------------
-Tclean["Decade"] = (Tclean["Date"].dt.year // 10) * 10
+    # --- House Price Index ---
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.plot(Tclean["Date"], Tclean["House_Price_Index"])
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Index")
+    ax.set_title("House Price Index")
+    ax.grid(True)
+    st.pyplot(fig)
 
-decTbl = (
-    Tclean.groupby("Decade")[["Mortgage_Rate", "Unemployment_Rate"]]
-    .mean()
-    .reset_index()
-    .rename(columns={
-        "Mortgage_Rate": "Avg_Mortgage_Rate",
-        "Unemployment_Rate": "Avg_Unemployment_Rate"
-    })
-)
+    # --- Mortgage Rate ---
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.plot(Tclean["Date"], Tclean["Mortgage_Rate"])
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Percent")
+    ax.set_title("Mortgage Rate")
+    ax.grid(True)
+    st.pyplot(fig)
 
-# ---------------------------------------------------------
-# 5) Visualizations
-# ---------------------------------------------------------
-plt.figure(figsize=(7,4))
-plt.plot(Tclean["Date"], Tclean["House_Price_Index"])
-plt.grid(True)
-plt.xlabel("Year")
-plt.ylabel("Index")
-plt.title("House Price Index over Time")
-plt.show()
+    # --- Unemployment Rate ---
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.plot(Tclean["Date"], Tclean["Unemployment_Rate"])
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Percent")
+    ax.set_title("Unemployment Rate")
+    ax.grid(True)
+    st.pyplot(fig)
 
-plt.figure(figsize=(7,4))
-plt.plot(Tclean["Date"], Tclean["Mortgage_Rate"])
-plt.grid(True)
-plt.xlabel("Year")
-plt.ylabel("Percent")
-plt.title("Mortgage Rate over Time")
-plt.show()
+    # --- Real Disposable Income ---
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.plot(Tclean["Date"], Tclean["Real_Disposable_Income"])
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Real $")
+    ax.set_title("Real Disposable Income")
+    ax.grid(True)
+    st.pyplot(fig)
 
-plt.figure(figsize=(7,4))
-plt.plot(Tclean["Date"], Tclean["Unemployment_Rate"])
-plt.grid(True)
-plt.xlabel("Year")
-plt.ylabel("Percent")
-plt.title("Unemployment Rate over Time")
-plt.show()
+    # --- Histogram ---
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.hist(Tclean["Mortgage_Rate"], bins=15)
+    ax.set_xlabel("Mortgage Rate (%)")
+    ax.set_ylabel("Count")
+    ax.set_title("Distribution of Mortgage Rates")
+    ax.grid(True)
+    st.pyplot(fig)
 
-plt.figure(figsize=(7,4))
-plt.plot(Tclean["Date"], Tclean["Real_Disposable_Income"])
-plt.grid(True)
-plt.xlabel("Year")
-plt.ylabel("Real Dollars")
-plt.title("Real Disposable Income over Time")
-plt.show()
+    # --- Decadal Summary ---
+    decTbl = (
+        Tclean.groupby("Decade")[["Mortgage_Rate", "Unemployment_Rate"]]
+        .mean()
+        .reset_index()
+        .rename(columns={
+            "Mortgage_Rate": "Avg_Mortgage_Rate",
+            "Unemployment_Rate": "Avg_Unemployment_Rate"
+        })
+    )
 
-# --- Histogram ---
-plt.figure(figsize=(7,4))
-plt.hist(Tclean["Mortgage_Rate"], bins=15)
-plt.grid(True)
-plt.xlabel("Mortgage Rate (%)")
-plt.ylabel("Count")
-plt.title("Distribution of Mortgage Rates")
-plt.show()
+    # Bar charts
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.bar(decTbl["Decade"], decTbl["Avg_Mortgage_Rate"])
+    ax.set_xlabel("Decade")
+    ax.set_ylabel("Avg Mortgage Rate (%)")
+    ax.set_title("Avg Mortgage Rate by Decade")
+    ax.grid(True)
+    st.pyplot(fig)
 
-# --- Bar: Decadal Avg Mortgage Rate ---
-plt.figure(figsize=(7,4))
-plt.bar(decTbl["Decade"], decTbl["Avg_Mortgage_Rate"])
-plt.grid(True)
-plt.xlabel("Decade")
-plt.ylabel("Avg Mortgage Rate (%)")
-plt.title("Average Mortgage Rate by Decade")
-plt.show()
+    fig, ax = plt.subplots(figsize=(7,4))
+    ax.bar(decTbl["Decade"], decTbl["Avg_Unemployment_Rate"])
+    ax.set_xlabel("Decade")
+    ax.set_ylabel("Avg Unemployment (%)")
+    ax.set_title("Avg Unemployment Rate by Decade")
+    ax.grid(True)
+    st.pyplot(fig)
 
-# --- Bar: Decadal Avg Unemployment Rate ---
-plt.figure(figsize=(7,4))
-plt.bar(decTbl["Decade"], decTbl["Avg_Unemployment_Rate"])
-plt.grid(True)
-plt.xlabel("Decade")
-plt.ylabel("Avg Unemployment Rate (%)")
-plt.title("Average Unemployment Rate by Decade")
-plt.show()
-
-# ---------------------------------------------------------
-# 6) Save cleaned outputs
-# ---------------------------------------------------------
-os.makedirs("output", exist_ok=True)
-
-Tclean.to_csv("output/Annual_Macro_Clean.csv", index=False)
-decTbl.to_csv("output/Annual_Macro_Decadal_Summary.csv", index=False)
-
-print("Done. Clean CSV and summaries saved in /output")
+    return decTbl
