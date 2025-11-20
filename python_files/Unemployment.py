@@ -102,7 +102,7 @@ def main():
     for pattern in ["name", "state", "region", "area", "geo"]:
         matches = lv.str.contains(pattern)
         if matches.any():
-            name_idx = matches.idxmax()
+            name_idx = matches.argmax()
             break
 
     if name_idx is None:
