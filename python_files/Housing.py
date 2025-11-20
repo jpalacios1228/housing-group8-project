@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import os
 
-def run():
+def main():
     st.header("🏡 Housing Dataset Analysis")
 
     # ---------------------------------------------------------
@@ -137,3 +137,6 @@ def run():
     st.success("Cleaned dataset saved to output/Housing_Clean.csv")
 
     st.success("🏁 Housing analysis complete!")
+
+if __name__ == "__main__":
+    main()
