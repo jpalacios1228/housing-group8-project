@@ -6,7 +6,7 @@ import os
 import re
 from pathlib import Path
 
-def run():
+def main():
     st.header("📈 US Population Report Analysis")
 
     # Config
@@ -225,3 +225,6 @@ def run():
     output_file = os.path.join(out_dir, "Population_Clean.csv")
     U.to_csv(output_file, index=False)
     st.success(f"💾 Cleaned population dataset saved to: `{output_file}`")
+
+if __name__ == "__main__":
+    main()
