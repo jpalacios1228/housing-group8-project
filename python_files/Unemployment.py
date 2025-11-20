@@ -97,104 +97,104 @@ def main():
     data.columns = names
 
     # Find name column
-lv = pd.Series(data.columns).str.lower()   # turn into Series so .str works
-name_idx = None
+    lv = pd.Series(data.columns).str.lower()   # turn into Series so .str works
+    name_idx = None
 
-for pattern in ["name", "state", "region", "area", "geo"]:
-    matches = lv.str.contains(pattern, na=False)
-    if matches.any():
-        name_idx = matches.argmax()   # correct for Series
-        break
+    for pattern in ["name", "state", "region", "area", "geo"]:
+        matches = lv.str.contains(pattern, na=False)
+        if matches.any():
+            name_idx = matches.argmax()   # correct for Series
+            break
 
-if name_idx is None:
-    name_idx = 0
-    cols = data.columns.tolist()
-    cols[0] = "Name"
-    data.columns = cols
+    if name_idx is None:
+        name_idx = 0
+        cols = data.columns.tolist()
+        cols[0] = "Name"
+        data.columns = cols
 
 
-    # Build U table
-    U = pd.DataFrame()
-    U["Name"] = data.iloc[:, name_idx].astype(str)
-    U = U[U["Name"].str.strip() != ""].copy()
+        # Build U table
+        U = pd.DataFrame()
+        U["Name"] = data.iloc[:, name_idx].astype(str)
+        U = U[U["Name"].str.strip() != ""].copy()
 
-    # Identify unemployment %
-    lv = data.columns.str.lower()
-    remove = lv.str.contains("fips|code|id|cnt|total|number")
-    cand_idx = [i for i in range(len(data.columns)) if not remove[i] and i != name_idx]
+        # Identify unemployment %
+        lv = data.columns.str.lower()
+        remove = lv.str.contains("fips|code|id|cnt|total|number")
+        cand_idx = [i for i in range(len(data.columns)) if not remove[i] and i != name_idx]
 
-    best = {'idx': None, 'score': -float('inf'), 'scale': 1, 'hdr': ""}
-    for idx in cand_idx:
-        hdr_name = data.columns[idx]
+        best = {'idx': None, 'score': -float('inf'), 'scale': 1, 'hdr': ""}
+        for idx in cand_idx:
+            hdr_name = data.columns[idx]
 
-        raw_vals = data.iloc[:len(U), idx].astype(str)
-        raw_vals = raw_vals.str.replace('%', '', regex=False)
-        raw_vals = raw_vals.str.replace(',', '', regex=False)
-        vals = pd.to_numeric(raw_vals, errors='coerce')
+            raw_vals = data.iloc[:len(U), idx].astype(str)
+            raw_vals = raw_vals.str.replace('%', '', regex=False)
+            raw_vals = raw_vals.str.replace(',', '', regex=False)
+            vals = pd.to_numeric(raw_vals, errors='coerce')
 
-        frac = vals.notna().mean()
-        if frac < 0.75:
-            continue
+            frac = vals.notna().mean()
+            if frac < 0.75:
+                continue
 
-        med = vals.median()
-        p90 = vals.quantile(0.90)
-        mx = vals.max()
-        score = 0
+            med = vals.median()
+            p90 = vals.quantile(0.90)
+            mx = vals.max()
+            score = 0
 
-        if any(k in hdr_name.lower() for k in ["unemploy", "rate", "percent", "pct"]):
-            score += 3
+            if any(k in hdr_name.lower() for k in ["unemploy", "rate", "percent", "pct"]):
+                score += 3
 
-        if p90 <= 20 and mx <= 100:
-            score += 5
-            scale = 1
-        elif p90 <= 1.2:
-            score += 4
-            scale = 100
-        else:
-            scale = 1
+            if p90 <= 20 and mx <= 100:
+                score += 5
+                scale = 1
+            elif p90 <= 1.2:
+                score += 4
+                scale = 100
+            else:
+                scale = 1
 
-        if score > best["score"]:
-            best.update({'idx': idx, 'score': score, 'scale': scale, 'hdr': hdr_name})
+            if score > best["score"]:
+                best.update({'idx': idx, 'score': score, 'scale': scale, 'hdr': hdr_name})
 
-    if best["idx"] is None:
-        raise ValueError("Could not detect unemployment % column.")
+        if best["idx"] is None:
+            raise ValueError("Could not detect unemployment % column.")
 
-    # Build numeric %
-    vals = data.iloc[:len(U), best["idx"]].astype(str)
-    vals = vals.str.replace('%', '', regex=False)
-    vals = vals.str.replace(',', '', regex=False)
-    U["Unemployment_Pct"] = pd.to_numeric(vals, errors='coerce') * best["scale"]
+        # Build numeric %
+        vals = data.iloc[:len(U), best["idx"]].astype(str)
+        vals = vals.str.replace('%', '', regex=False)
+        vals = vals.str.replace(',', '', regex=False)
+        U["Unemployment_Pct"] = pd.to_numeric(vals, errors='coerce') * best["scale"]
 
-    # Final cleaning
-    U = U[~U["Name"].str.lower().eq("united states")].copy()
-    U = U[~U["Name"].str.match(r'^\d+$', na=False)].copy()
-    U = U[(U["Unemployment_Pct"] >= 0) & (U["Unemployment_Pct"] <= 100)]
+        # Final cleaning
+        U = U[~U["Name"].str.lower().eq("united states")].copy()
+        U = U[~U["Name"].str.match(r'^\d+$', na=False)].copy()
+        U = U[(U["Unemployment_Pct"] >= 0) & (U["Unemployment_Pct"] <= 100)]
 
-    # Save cleaned CSV
-    out_csv = os.path.join(out_dir, "Unemployment_Clean.csv")
-    U.to_csv(out_csv, index=False)
+        # Save cleaned CSV
+        out_csv = os.path.join(out_dir, "Unemployment_Clean.csv")
+        U.to_csv(out_csv, index=False)
 
-    # Plot histogram
-    plt.figure(figsize=(9, 5))
-    plt.hist(U["Unemployment_Pct"], bins=15)
-    plt.xlabel("Unemployment Rate (%)")
-    plt.ylabel("Count")
-    plt.title("Distribution of Unemployment Rates")
-    hist_path = os.path.join(out_dir, "unemployment_hist.png")
-    plt.savefig(hist_path)
-    plt.close()
+        # Plot histogram
+        plt.figure(figsize=(9, 5))
+        plt.hist(U["Unemployment_Pct"], bins=15)
+        plt.xlabel("Unemployment Rate (%)")
+        plt.ylabel("Count")
+        plt.title("Distribution of Unemployment Rates")
+        hist_path = os.path.join(out_dir, "unemployment_hist.png")
+        plt.savefig(hist_path)
+        plt.close()
 
-    # Plot top 10
-    top10 = U.nlargest(10, "Unemployment_Pct")
-    plt.figure(figsize=(9, 6))
-    plt.barh(top10["Name"], top10["Unemployment_Pct"])
-    plt.xlabel("Unemployment Rate (%)")
-    plt.title("Top 10 Highest Unemployment")
-    bar_path = os.path.join(out_dir, "unemployment_top10.png")
-    plt.savefig(bar_path)
-    plt.close()
-
-    return U, hist_path, bar_path
+        # Plot top 10
+        top10 = U.nlargest(10, "Unemployment_Pct")
+        plt.figure(figsize=(9, 6))
+        plt.barh(top10["Name"], top10["Unemployment_Pct"])
+        plt.xlabel("Unemployment Rate (%)")
+        plt.title("Top 10 Highest Unemployment")
+        bar_path = os.path.join(out_dir, "unemployment_top10.png")
+        plt.savefig(bar_path)
+        plt.close()
+    
+        return U, hist_path, bar_path
     
 if __name__ == "__main__":
     main()
