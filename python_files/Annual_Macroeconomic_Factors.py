@@ -121,3 +121,32 @@ def make_plots(Tclean):
     st.pyplot(fig)
 
     return decTbl
+
+# =========================================================
+# 3) MAIN function for Streamlit
+# =========================================================
+def main():
+    st.header("📊 Annual Macroeconomic Factors")
+
+    st.subheader("📂 Loading & Cleaning Data")
+    try:
+        Tclean = load_data()
+        st.success("Data loaded and cleaned.")
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return
+
+    st.write("### 🔎 Preview of Cleaned Data")
+    st.dataframe(Tclean.head())
+
+    # Generate all visualizations
+    make_plots(Tclean)
+
+    st.success("🏁 Macroeconomic Factors analysis complete!")
+
+
+# =========================================================
+# 4) Allow running directly
+# =========================================================
+if __name__ == "__main__":
+    main()
