@@ -1,166 +1,193 @@
-%% Housing Group 8 — Unemployment Report (Auto-Detect % Column, v3)
-clear; clc; close all;
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import re
+from pathlib import Path
 
-inFile  = 'UnemploymentReport.xlsx';
-inSheet = 'UnemploymentReport';
-outDir  = 'output'; if ~exist(outDir,'dir'), mkdir(outDir); end
 
-%% Load sheet without trusting headers
-Raw = readcell(inFile, 'Sheet', inSheet);
-[nRows, nCols] = size(Raw);
+def load_and_process_unemployment(file="UnemploymentReport.xlsx", sheet="UnemploymentReport", out_dir="output"):
+    """
+    Full unemployment processing pipeline:
+    - Load raw sheet without trusting headers
+    - Auto-detect header row
+    - Detect data rows
+    - Build cleaned table
+    - Auto-detect unemployment percentage column using heuristics
+    - Scale correctly (percent vs fraction)
+    - Final cleaning (remove US row, remove numeric-only names)
+    - Create histogram + top-10 bar plot
+    - Save cleaned CSV
+    - Return table + image paths
+    """
 
-isemptycell = @(v) (isempty(v) || (isstring(v)&&v=="") || (ischar(v)&&strcmp(v,'')) || (isnumeric(v)&&isnan(v)));
-tos = @(x) string(x);
+    # Ensure output directory
+    Path(out_dir).mkdir(exist_ok=True)
 
-% pick the row that looks the most like a header
-bestRow = NaN; bestScore = -Inf;
-for r = 1:nRows
-    s = lower(strtrim(tos(Raw(r,:))));
-    nonEmpty = sum(~arrayfun(isemptycell, Raw(r,:)));
-    keyHits  = sum(contains(s, ["unemploy","rate","percent","pct","lower","upper","bound","name","state","region","fips"]));
-    score = nonEmpty + 2*keyHits;
-    if score > bestScore, bestScore = score; bestRow = r; end
-end
-hdrRow = bestRow;
-hdr    = tos(Raw(hdrRow,:));
-lastCol = find(~(hdr=="" | ismissing(hdr)), 1, 'last'); if isempty(lastCol), error('Header row empty.'); end
-hdr    = hdr(1:lastCol);
+    # Load raw sheet without trusting headers
+    raw = pd.read_excel(file, sheet_name=sheet, header=None, dtype=str)
+    n_rows, n_cols = raw.shape
 
-dataStart = hdrRow+1;
-isDataRow = false(nRows,1);
-for r = dataStart:nRows
-    c1 = Raw{r,1}; c2 = []; if lastCol>=2, c2 = Raw{r,2}; end
-    isDataRow(r) = ~(isemptycell(c1) & isemptycell(c2));
-end
-if ~any(isDataRow(dataStart:end)), error('No data rows under header.'); end
-dataEnd = find(isDataRow,1,'last');
+    # Helper for determining emptiness
+    def empty(val):
+        if val is None: return True
+        if isinstance(val, float) and np.isnan(val): return True
+        if isinstance(val, str) and val.strip() == "": return True
+        return False
 
-Data = Raw(dataStart:dataEnd, 1:lastCol);
-T = cell2table(Data);
+    # 1) Auto-detect header row
+    best_row = None
+    best_score = -1
 
-names = matlab.lang.makeValidName(cellstr(hdr));
-names = regexprep(names,'[^A-Za-z0-9_]','_'); names = regexprep(names,'_+','_');
-names = matlab.lang.makeUniqueStrings(names);
-T.Properties.VariableNames = names;
+    header_keywords = ["unemploy", "rate", "percent", "pct", "lower", "upper", "bound", "name", "state", "region", "fips"]
 
-%% Choose label column (state/region)
-v = string(T.Properties.VariableNames); lv = lower(v);
-nameIdx = find(contains(lv, ["name","state","region","area","geo"]), 1, 'first');
-if isempty(nameIdx), nameIdx = 1; v(nameIdx)="Name"; T.Properties.VariableNames=cellstr(v); lv=lower(v); end
+    for r in range(n_rows):
+        row_vals = raw.iloc[r].astype(str)
+        lv = row_vals.str.lower().str.strip()
 
-U = table; U.Name = string(T.(T.Properties.VariableNames{nameIdx}));
-U = U(~ismissing(U.Name) & U.Name~="", :);  % drop blank names
+        non_empty = sum(~lv.apply(empty))
+        hits = sum(lv.str.contains("|".join(header_keywords), na=False))
 
-%% Score all candidate numeric columns to find the unemployment percentage
-badHdr = contains(lv, ["fips","code","id","number","cnt","count","total"]);
-candIdx = setdiff( find(~badHdr & ( (1:numel(lv))~=nameIdx )), nameIdx );
+        score = non_empty + 2 * hits
+        if score > best_score:
+            best_score = score
+            best_row = r
 
-best = struct('idx',[], 'scale',1, 'score',-Inf, 'median',NaN, 'p90',NaN, 'maxv',NaN, 'hdr','');
+    if best_row is None:
+        raise ValueError("Could not detect header row.")
 
-debugRows = [];
+    # Trim empty columns
+    hdr = raw.iloc[best_row].astype(str)
+    valid_cols = hdr.replace("", np.nan).dropna().index
+    last_col = valid_cols.max()
+    hdr = hdr.loc[:last_col]
 
-for idx = candIdx(:)'
-    hdrName = T.Properties.VariableNames{idx};
+    # 2) Determine data rows
+    data_start = best_row + 1
+    is_data_row = []
 
-    % coerce to numeric, stripping % and commas
-    rawVals = string(T.(hdrName));
-    rawVals = erase(rawVals, "%"); rawVals = erase(rawVals, ",");
-    vals = str2double(rawVals);
-    vals = vals(1:min(height(U), numel(vals)));
+    for r in range(data_start, n_rows):
+        c1 = raw.iloc[r, 0]
+        c2 = raw.iloc[r, 1] if last_col >= 1 else ""
+        is_data_row.append(not (empty(c1) and empty(c2)))
 
-    finiteMask = isfinite(vals);
-    fracFinite = mean(finiteMask);
-    if fracFinite < 0.75, continue; end   % need mostly numeric
+    if not any(is_data_row):
+        raise ValueError("No data rows under header.")
 
-    medv = median(vals,'omitnan');
-    p90  = prctile(vals,90);   % robust upper spread
-    mx   = max(vals,[],'omitnan');
+    data_end = data_start + np.where(is_data_row)[0].max()
+    data = raw.iloc[data_start:data_end+1, :last_col+1]
 
-    % Heuristics:
-    %   prefer 0-20 range or (0-1 range -> fraction)
-    score = 0;
-    hdrLower = lower(hdrName);
-    if contains(hdrLower,"unemploy") || contains(hdrLower,"rate") || contains(hdrLower,"percent") || contains(hdrLower,"pct")
-        score = score + 3;
-    end
-    if (p90 <= 20 && mx <= 100 && medv >= 2 && medv <= 12)
-        score = score + 5;  % looks like percent already
-        proposedScale = 1;
-    elseif (p90 <= 1.0 && mx <= 1.2 && medv >= 0.02 && medv <= 0.12)
-        score = score + 4;  % looks like fraction
-        proposedScale = 100;
-    else
-        % penalize integer-heavy large columns (likely codes or counts)
-        intLike = mean(abs(vals - round(vals)) < 1e-9, 'omitnan');
-        if intLike > 0.9 && mx>50, score = score - 4; end
-        % mild acceptance if mostly <=100
-        if mx<=100 && p90<=30, score = score + 1; end
-        proposedScale = 1;
-    end
+    # Build DataFrame with cleaned column names
+    df = data.copy()
+    colnames = hdr.astype(str).str.replace("[^A-Za-z0-9_]", "_", regex=True)
+    colnames = colnames.str.replace("_+", "_", regex=True)
+    df.columns = colnames
 
-    % store for debug table
-    debugRows = [debugRows; {hdrName, fracFinite, medv, p90, mx, score, proposedScale}];
+    # 3) Detect name column
+    lv = df.columns.str.lower()
+    name_idx = None
+    for key in ["name", "state", "region", "area", "geo"]:
+        matches = lv.str.contains(key)
+        if matches.any():
+            name_idx = matches.argmax()
+            break
 
-    if score > best.score
-        best.idx   = idx;
-        best.scale = proposedScale;
-        best.score = score;
-        best.median= medv; best.p90=p90; best.maxv=mx; best.hdr=hdrName;
-    end
-end
+    if name_idx is None:
+        name_idx = 0
+        df.rename(columns={df.columns[0]: "Name"}, inplace=True)
 
-% Show candidates for transparency
-fprintf('\nCandidate columns (most numeric → least filtered):\n');
-fprintf('%-30s  finite%%  median   p90     max     score  scale\n');
-if ~isempty(debugRows)
-    for i=1:size(debugRows,1)
-        fprintf('%-30s  %6.2f  %7.2f  %6.2f  %7.2f   %5.1f   x%3d\n', ...
-            debugRows{i,1}, debugRows{i,2}, debugRows{i,3}, debugRows{i,4}, debugRows{i,5}, debugRows{i,6}, debugRows{i,7});
-    end
-end
+    # Build U table
+    U = pd.DataFrame()
+    U["Name"] = df.iloc[:, name_idx].astype(str)
+    U = U[U["Name"].str.strip() != ""]
 
-assert(~isempty(best.idx) && isfinite(best.score), 'Could not detect a credible unemployment rate column.');
+    # 4) Auto-detect unemployment % column
+    bad_hdr = lv.str.contains("fips|code|id|number|cnt|count|total")
+    cand_idx = [i for i in range(len(df.columns)) if i != name_idx and not bad_hdr[i]]
 
-% Build numeric percent column
-vals = string(T.(T.Properties.VariableNames{best.idx}));
-vals = erase(vals, "%"); vals = erase(vals, ",");
-vals = str2double(vals); vals = vals(1:height(U));
-U.Unemployment_Pct = vals * best.scale;
+    best = {"idx": None, "score": -999, "scale": 1, "median": None, "p90": None, "max": None}
 
-%% Final cleaning
-U(strcmpi(strtrim(U.Name),'United States'), :) = [];
+    for idx in cand_idx:
+        colname = df.columns[idx]
+        rawvals = df.iloc[:len(U), idx].astype(str)
+        rawvals = rawvals.str.replace("%", "", regex=False)
+        rawvals = rawvals.str.replace(",", "", regex=False)
+        vals = pd.to_numeric(rawvals, errors="coerce")
 
-% Drop rows whose "Name" is all digits (FIPS-like) or starts with digits
-isAllDigits = ~cellfun('isempty', regexp(cellstr(U.Name), '^\d+$', 'once'));
-U = U(~isAllDigits, :);
+        finite = vals.notna().mean()
+        if finite < 0.75:
+            continue
 
-% Keep only sensible 0..100 %
-U = U(U.Unemployment_Pct>=0 & U.Unemployment_Pct<=100, :);
+        med = vals.median()
+        p90 = vals.quantile(0.90)
+        mx = vals.max()
 
-fprintf('\n✅ Using column "%s" (scale x%d). Rows kept: %d\n', best.hdr, best.scale, height(U));
+        score = 0
+        lname = colname.lower()
 
-%% Simple stats + plots
-x = U.Unemployment_Pct;
-fprintf('\n=== Summary: Unemployment Rate (%%) ===\n');
-fprintf('Count: %d | Mean: %.2f | Std: %.2f | Min: %.2f | Median: %.2f | Max: %.2f\n', ...
-    numel(x), mean(x,'omitnan'), std(x,'omitnan'), min(x), median(x), max(x));
+        # Header keyword bonus
+        if any(k in lname for k in ["unemploy", "rate", "percent", "pct"]):
+            score += 3
 
-[~, idxDesc] = sort(x,'descend','MissingPlacement','last');
-topN = min(10, height(U)); top10 = U(idxDesc(1:topN), {'Name','Unemployment_Pct'});
+        # Percent range
+        if p90 <= 20 and mx <= 100 and 2 <= med <= 12:
+            score += 5
+            scale = 1
 
-fig1 = figure('Name','Histogram - Unemployment Rate','Position',[80 80 900 480]);
-histogram(x, 15); grid on; box on;
-xlabel('Unemployment rate (%)'); ylabel('Number of states');
-title('Distribution of Unemployment Rates');
-saveas(fig1, fullfile(outDir,'unemployment_hist.png'));
+        # Fraction range
+        elif p90 <= 1.0 and mx <= 1.2 and 0.02 <= med <= 0.12:
+            score += 4
+            scale = 100
 
-fig2 = figure('Name','Top 10 Highest Unemployment','Position',[80 80 900 560]);
-cats = categorical(string(top10.Name)); cats = reordercats(cats, string(top10.Name));
-barh(cats, top10.Unemployment_Pct); grid on; box on;
-xlabel('Unemployment rate (%)'); ylabel('State');
-title('Top 10 Highest Unemployment');
-xlim([0, max(top10.Unemployment_Pct)*1.15]);
-saveas(fig2, fullfile(outDir,'unemployment_top10.png'));
+        else:
+            scale = 1
+            # Penalize codes
+            int_like = np.mean(np.abs(vals - np.round(vals)) < 1e-9)
+            if int_like > 0.9 and mx > 50:
+                score -= 4
+            if mx <= 100 and p90 <= 30:
+                score += 1
 
-writetable(U, fullfile(outDir,'Unemployment_Clean.csv'));
-disp('✅ Clean table and figures saved in /output');
+        if score > best["score"]:
+            best.update({"idx": idx, "score": score, "scale": scale, "median": med, "p90": p90, "max": mx})
+
+    if best["idx"] is None:
+        raise ValueError("Could not detect unemployment percentage column.")
+
+    # Build unemployment % column
+    rawvals = df.iloc[:len(U), best["idx"]].astype(str)
+    rawvals = rawvals.str.replace("%", "", regex=False)
+    rawvals = rawvals.str.replace(",", "", regex=False)
+    U["Unemployment_Pct"] = pd.to_numeric(rawvals, errors="coerce") * best["scale"]
+
+    # 5) Final cleaning
+    U = U[~U["Name"].str.lower().eq("united states")]
+    U = U[~U["Name"].str.match(r"^\d+$")]
+    U = U[(U["Unemployment_Pct"] >= 0) & (U["Unemployment_Pct"] <= 100)]
+
+    # Save cleaned CSV
+    out_csv = os.path.join(out_dir, "Unemployment_Clean.csv")
+    U.to_csv(out_csv, index=False)
+
+    # 6) Plots
+    # Histogram
+    plt.figure(figsize=(9, 5))
+    plt.hist(U["Unemployment_Pct"], bins=15)
+    plt.xlabel("Unemployment Rate (%)")
+    plt.ylabel("Count")
+    plt.title("Distribution of Unemployment Rates")
+    hist_path = os.path.join(out_dir, "unemployment_hist.png")
+    plt.savefig(hist_path)
+    plt.close()
+
+    # Top 10
+    top10 = U.nlargest(10, "Unemployment_Pct")
+    plt.figure(figsize=(9, 6))
+    plt.barh(top10["Name"], top10["Unemployment_Pct"])
+    plt.xlabel("Unemployment Rate (%)")
+    plt.title("Top 10 Highest Unemployment")
+    bar_path = os.path.join(out_dir, "unemployment_top10.png")
+    plt.savefig(bar_path)
+    plt.close()
+
+    return U, hist_path, bar_path
