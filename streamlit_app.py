@@ -3,79 +3,100 @@ import os
 import sys
 import traceback
 
+# ──────────────────────────────────────────────
+# STREAMLIT PAGE SETUP
+# ──────────────────────────────────────────────
 st.set_page_config(layout="wide")
-st.title("Housing Market Analysis - Debug Mode")
+st.title("📊 Housing Market Analysis — Debug & Run")
 
-# Debug: Show current directory structure
+# ──────────────────────────────────────────────
+# DIRECTORY STRUCTURE VIEW
+# ──────────────────────────────────────────────
 st.subheader("📁 Current Directory Structure")
+
 try:
     for root, dirs, files in os.walk("."):
-        # Skip hidden directories like .git
-        if '/.' in root:
-            continue
-        level = root.replace(".", "").count(os.sep)
-        indent = " " * 2 * level
-        st.write(f"{indent}📁 {os.path.basename(root)}/")
-        sub_indent = " " * 2 * (level + 1)
-        for file in files[:10]:  # Limit to first 10 files per directory
-            if file.endswith(('.py', '.txt', '.xlsx', '.csv')):
-                st.write(f"{sub_indent}📄 {file}")
+        if "/." in root:
+            continue  # skip hidden directories
+        indent = " " * (root.count(os.sep) * 2)
+        st.write(f"{indent}📁 {root}/")
+
+        for file in files:
+            if file.endswith((".py", ".xlsx", ".csv")):
+                st.write(f"{indent} 📄 {file}")
 except Exception as e:
-    st.error(f"Error listing directory: {e}")
+    st.error(f"Error scanning directory: {e}")
 
-# Try to import your modules
-st.subheader("🔄 Testing Imports")
-try:
-    # Add python_files to path
-    sys.path.append('python_files')
-    
-    st.write("✓ Python path updated")
-    
-    # Try importing
-    import python_files.Annual_Macroeconomic_Factors as MacroF
-    st.success("✓ Successfully imported Annual_Macroeconomic_Factors")
 
-    import python_files.Housing as Housing
-    st.success("✓ Successfully imported Housing")
+# ──────────────────────────────────────────────
+# ADD python_files/ TO PATH
+# ──────────────────────────────────────────────
+sys.path.append("python_files")
+st.write("➡️ Added `python_files/` to system path.")
 
-    import python_files.Population_report as Population
-    st.success("✓ Successfully imported Population_report")
 
-    import python_files.poverty_report as Poverty
-    st.success("✓ Successfully imported poverty_report")
+# ──────────────────────────────────────────────
+# IMPORT MODULES
+# ──────────────────────────────────────────────
+st.subheader("🔄 Importing Data Cleaning Modules")
 
-    import python_files.Unemployment as Unemployment
-    st.success("✓ Successfully imported Unemployment")
+modules = {
+    "Macroeconomic Factors":  "Annual_Macroeconomic_Factors",
+    "Housing":                "Housing",
+    "Population Report":      "Population_report",
+    "Poverty Report":         "poverty_report",
+    "Unemployment Report":    "Unemployment"
+}
 
+loaded_modules = {}
+
+for label, module_name in modules.items():
+    try:
+        imported = __import__(f"python_files.{module_name}", fromlist=[module_name])
+        loaded_modules[label] = imported
+        st.success(f"✓ Imported `{module_name}.py` successfully")
     except Exception as e:
-    st.error(f"❌ Import error: {e}")
-    st.code(traceback.format_exc())
+        st.error(f"❌ Failed to import `{module_name}.py`")
+        st.code(traceback.format_exc())
 
-# Test data file access
-st.subheader("📊 Testing Data File Access")
-try:
-    # Check if data files exist
-    data_files = [
-        "Annual_Macroeconomic_Factors.xlsx",
-        "Housing.xlsx",
-        "PopulationReport.xlsx",
-        "PovertyReport.xlsx",
-        "UnemploymentReport.xlsx",
-    ]
-    
-    for file_path in data_files:
-        if os.path.exists(file_path):
-            st.success(f"✓ Found: {file_path}")
-        else:
-            st.error(f"❌ Missing: {file_path}")
-            
-except Exception as e:
-    st.error(f"Error checking data files: {e}")
 
-st.success("🔧 Debug complete - check above for issues!")
+# ──────────────────────────────────────────────
+# CHECK XLSX DATA FILES
+# ──────────────────────────────────────────────
+st.subheader("📊 Checking Required Excel Data Files")
 
-#import python_files.Annual_Macroeconomic_Factors as MacroF
-#import python_files.Housing as Housing
-#import python_files.Population_report as Population
-#import python_files.poverty_report as Poverty
-#import python_files.Unemployment as Unemployment
+data_files = [
+    "Annual_Macroeconomic_Factors.xlsx",
+    "Housing.xlsx",
+    "PopulationReport.xlsx",
+    "PovertyReport.xlsx",
+    "UnemploymentReport.xlsx"
+]
+
+for file in data_files:
+    if os.path.exists(file):
+        st.success(f"✓ Found: {file}")
+    else:
+        st.error(f"❌ Missing: {file}")
+
+
+# ──────────────────────────────────────────────
+# RUN EACH MODULE'S main() FUNCTION
+# ──────────────────────────────────────────────
+st.subheader("▶️ Running Data Cleaning Scripts")
+
+for label, module in loaded_modules.items():
+    st.write(f"### 🔧 Running `{label}`")
+
+    if hasattr(module, "main"):
+        try:
+            module.main()
+            st.success(f"✓ Finished running `{label}`")
+        except Exception as e:
+            st.error(f"❌ Error in `{label}` during execution")
+            st.code(traceback.format_exc())
+    else:
+        st.warning(f"⚠️ Module `{label}` has no main() function")
+
+
+st.success("🎉 All Systems Complete — Check output folder for results!")
