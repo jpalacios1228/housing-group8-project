@@ -44,8 +44,9 @@ modules = {
     "Macroeconomic Factors":  "Annual_Macroeconomic_Factors",
     "Housing":                "Housing",
     "Population Report":      "Population_report",
-    "Poverty Report":         "poverty_report",
-    "Unemployment Report":    "Unemployment"
+    "Homelessness Trend":     "HomelessYears",
+    "Housing Macroeconomic Factors": "Housing_Macroeconomic_Factors",
+    "Regional Cost of Living": "Regional_Cost_of_Living"
 }
 
 loaded_modules = {}
