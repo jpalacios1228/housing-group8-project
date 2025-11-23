@@ -2,9 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+import streamlit as st
+
 
 def main():
-    """Housing Macroeconomic Factors Analysis (Python version of MATLAB script)"""
+    """Housing Macroeconomic Factors Analysis (Streamlit-compatible)"""
 
     # ---------------------------------------------------
     # 1. Setup and Load
@@ -15,87 +17,83 @@ def main():
     Path(out_dir).mkdir(exist_ok=True)
 
     if not os.path.exists(in_file):
-        raise FileNotFoundError(
-            f'Could not read file. Make sure "{in_file}" is in the working folder.'
-        )
+        st.error(f'❌ File "{in_file}" not found.')
+        return None, None
 
     try:
         df = pd.read_excel(in_file)
-        print("✅ File loaded successfully.")
-    except Exception as e:
-        raise RuntimeError(
-            f'Could not read file. Ensure "{in_file}" exists and is a valid Excel file.'
-        ) from e
+        st.success("📄 File loaded successfully.")
+    except Exception:
+        st.error("❌ Could not read Excel file — check file format.")
+        return None, None
 
     # ---------------------------------------------------
     # 2. Data Setup
     # ---------------------------------------------------
     if "Date" not in df.columns:
-        raise KeyError('This file does not appear to contain a "Date" column.')
+        st.error('❌ Column "Date" missing from spreadsheet.')
+        return None, None
 
-    # Convert Date column to datetime
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df = df.dropna(subset=["Date"]).sort_values("Date")
 
-    # Drop invalid dates
-    df = df.dropna(subset=["Date"])
-
-    # Sort rows by Date
-    df = df.sort_values("Date")
+    st.write("### 📊 Data Preview", df.head())
 
     # ---------------------------------------------------
     # 3. Plot 1: House Prices vs Mortgage Rates (Dual Axis)
     # ---------------------------------------------------
-    plt.figure(figsize=(10, 5))
+    fig1, ax1 = plt.subplots(figsize=(10, 5))
 
-    # Left axis: House Price Index
-    ax1 = plt.gca()
-    ax1.plot(df["Date"], df["house_price_index"], linewidth=2, label="House Price Index")
+    # Left axis — House Price Index
+    ax1.plot(df["Date"], df["house_price_index"], linewidth=2,
+             label="House Price Index")
     ax1.set_ylabel("House Price Index (HPI)")
     ax1.set_xlabel("Date")
-    ax1.tick_params(axis="y")
+    ax1.grid(True)
 
-    # Right axis: Mortgage Rate
+    # Right axis — Mortgage Rate
     ax2 = ax1.twinx()
-    ax2.plot(df["Date"], df["mortgage_rate"], linewidth=1.5, label="Mortgage Rate", linestyle="-")
+    ax2.plot(df["Date"], df["mortgage_rate"], linewidth=1.5,
+             label="Mortgage Rate", linestyle="-")
     ax2.set_ylabel("Mortgage Rate (%)")
-    ax2.tick_params(axis="y")
 
-    plt.title("US Housing Market: Prices vs. Mortgage Rates")
-    plt.grid(True)
-
-    # Unified legend
+    # Combine legends
     lines = ax1.lines + ax2.lines
     labels = [line.get_label() for line in lines]
-    plt.legend(lines, labels, loc="best")
+    ax1.legend(lines, labels, loc="best")
 
-    # Save plot
+    fig1.suptitle("US Housing Market: Prices vs. Mortgage Rates", fontsize=14)
+
+    # Save PNG for output folder
     out_path1 = os.path.join(out_dir, "HPI_vs_Mortgage.png")
-    plt.savefig(out_path1, dpi=300, bbox_inches="tight")
-    plt.close()
+    fig1.savefig(out_path1, dpi=300, bbox_inches="tight")
 
     # ---------------------------------------------------
-    # 4. Plot 2: GDP & Employment (Subplots)
+    # 4. Plot 2: GDP & Employment (Two subplots)
     # ---------------------------------------------------
-    plt.figure(figsize=(10, 6))
+    fig2, axes = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
-    # GDP subplot
-    plt.subplot(2, 1, 1)
-    plt.plot(df["Date"], df["gdp"], linewidth=1.5)
-    plt.title("GDP Growth Index")
-    plt.ylabel("GDP")
-    plt.grid(True)
+    # GDP
+    axes[0].plot(df["Date"], df["gdp"], linewidth=1.5)
+    axes[0].set_title("GDP Growth Index")
+    axes[0].set_ylabel("GDP")
+    axes[0].grid(True)
 
-    # Employment subplot
-    plt.subplot(2, 1, 2)
-    plt.plot(df["Date"], df["employment_rate"], linewidth=1.5)
-    plt.title("Employment Rate (%)")
-    plt.ylabel("Employment %")
-    plt.xlabel("Date")
-    plt.grid(True)
+    # Employment Rate
+    axes[1].plot(df["Date"], df["employment_rate"], linewidth=1.5)
+    axes[1].set_title("Employment Rate (%)")
+    axes[1].set_ylabel("Employment %")
+    axes[1].set_xlabel("Date")
+    axes[1].grid(True)
 
-    # Save plot
+    fig2.tight_layout()
+
     out_path2 = os.path.join(out_dir, "Economic_Health.png")
-    plt.savefig(out_path2, dpi=300, bbox_inches="tight")
-    plt.close()
+    fig2.savefig(out_path2, dpi=300, bbox_inches="tight")
 
-    print("✅ Analysis complete. Graphs saved in the 'output' folder.")
+    st.success("✅ Housing Macroeconomic Factors analysis completed.")
+
+    # ---------------------------------------------------
+    # 5. Return figures for Streamlit
+    # ---------------------------------------------------
+    return fig1, fig2
