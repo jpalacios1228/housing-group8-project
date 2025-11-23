@@ -73,10 +73,10 @@ def main():
     plt.savefig(out_path1, dpi=300, bbox_inches="tight")
     plt.close()
 
-    # ---------------------------------------------------
+       # ---------------------------------------------------
     # 4. Visualization 2: Stacked Percentage Breakdown
     # ---------------------------------------------------
-    percentage_cols = df_avg[
+    percentage_df = df_avg[
         [
             "Housing_Cost_Percentage",
             "Tax_Rate",
@@ -96,16 +96,30 @@ def main():
 
     plt.figure(figsize=(12, 6))
 
-    plt.bar(years, percentage_cols.values, stacked=True)
+    # Start with zero baseline
+    bottom = None
+
+    for i, col in enumerate(percentage_df.columns):
+        plt.bar(
+            years,
+            percentage_df[col],
+            bottom=bottom,
+            label=legend_names[i]
+        )
+
+        # Update cumulative total for next layer
+        if bottom is None:
+            bottom = percentage_df[col]
+        else:
+            bottom = bottom + percentage_df[col]
 
     plt.grid(True)
     plt.title("Average Cost of Living Breakdown by Year")
     plt.xlabel("Year")
     plt.ylabel("Percentage of Income (%)")
-    plt.legend(legend_names, loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     out_path2 = os.path.join(out_dir, "Cost_Breakdown_Stacked.png")
     plt.savefig(out_path2, dpi=300, bbox_inches="tight")
     plt.close()
 
-    print("✅ Analysis complete. Graphs saved in 'output' folder.")
