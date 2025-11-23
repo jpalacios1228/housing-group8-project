@@ -30,8 +30,9 @@ modules = {
     "Macroeconomic Factors":  "Annual_Macroeconomic_Factors",
     "Housing":                "Housing",
     "Population Report":      "Population_report",
-    "Poverty Report":         "poverty_report",
-    "Unemployment Report":    "Unemployment"
+    "Homelessness Trend":     "HomelessYears",
+    "Housing Macroeconomic Factors": "Housing_Macroeconomic_Factors",
+    "Regional Cost of Living": "Regional_Cost_of_Living"
 }
 
 loaded_modules = {}
@@ -52,8 +53,9 @@ data_files = [
     "Annual_Macroeconomic_Factors.xlsx",
     "Housing.xlsx",
     "PopulationReport.xlsx",
-    "PovertyReport.xlsx",
-    "UnemploymentReport.xlsx"
+    "HomelessYears.xlsx",
+    "Housing_Macroeconomic_Factors_US(good).xlsx",
+    "Regional Cost of Living.xlsx",
 ]
 
 for file in data_files:
