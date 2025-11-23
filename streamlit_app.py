@@ -70,8 +70,9 @@ data_files = [
     "Annual_Macroeconomic_Factors.xlsx",
     "Housing.xlsx",
     "PopulationReport.xlsx",
-    "PovertyReport.xlsx",
-    "UnemploymentReport.xlsx"
+    "HomelessYears.xlsx",
+    "Housing_Macroeconomic_Factors_US(good).xlsx",
+    "Regional Cost of Living.xlsx",
 ]
 
 for file in data_files:
