@@ -10,25 +10,6 @@ st.set_page_config(layout="wide")
 st.title("📊 Housing Market Analysis — Debug & Run")
 
 # ──────────────────────────────────────────────
-# DIRECTORY STRUCTURE VIEW
-# ──────────────────────────────────────────────
-st.subheader("📁 Current Directory Structure")
-
-try:
-    for root, dirs, files in os.walk("."):
-        if "/." in root:
-            continue  # skip hidden directories
-        indent = " " * (root.count(os.sep) * 2)
-        st.write(f"{indent}📁 {root}/")
-
-        for file in files:
-            if file.endswith((".py", ".xlsx", ".csv")):
-                st.write(f"{indent} 📄 {file}")
-except Exception as e:
-    st.error(f"Error scanning directory: {e}")
-
-
-# ──────────────────────────────────────────────
 # ADD python_files/ TO PATH
 # ──────────────────────────────────────────────
 sys.path.append("python_files")
