@@ -2,9 +2,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import os
+import streamlit as st
+
 
 def main():
-    """Regional Cost of Living Analysis — Python version of MATLAB script"""
+    """Regional Cost of Living Analysis — Streamlit Compatible"""
 
     # ---------------------------------------------------
     # 1. Setup and Load
@@ -15,17 +17,15 @@ def main():
     Path(out_dir).mkdir(exist_ok=True)
 
     if not os.path.exists(in_file):
-        raise FileNotFoundError(
-            f'Could not read file. Make sure "{in_file}" is in the working directory.'
-        )
+        st.error(f'❌ File "{in_file}" not found in the working directory.')
+        return None, None
 
     try:
         df = pd.read_excel(in_file)
-        print("✅ File loaded successfully.")
-    except Exception as e:
-        raise RuntimeError(
-            f'Could not read file. Ensure "{in_file}" exists and is a valid Excel file.'
-        ) from e
+        st.success("📄 File loaded successfully.")
+    except Exception:
+        st.error(f'❌ Could not read file. Ensure "{in_file}" is valid.')
+        return None, None
 
     # ---------------------------------------------------
     # Clean: Remove invalid years
@@ -46,10 +46,8 @@ def main():
         "Transportation_Cost_Percentage"
     ]
 
-    # Group by year and compute mean
     df_avg = df.groupby("Year")[vars_to_average].mean().reset_index()
-
-    print("Data aggregated by Year.")
+    st.write("### 📊 Aggregated Data (Yearly Means)", df_avg.head())
 
     # ---------------------------------------------------
     # 3. Visualization 1: Income vs Cost
@@ -58,24 +56,25 @@ def main():
     income = df_avg["Average_Monthly_Income"]
     cost = df_avg["Cost_of_Living"]
 
-    plt.figure(figsize=(12, 6))
+    fig1, ax1 = plt.subplots(figsize=(12, 6))
 
-    plt.plot(years, income, "-o", linewidth=2, label="Avg Monthly Income")
-    plt.plot(years, cost, "-x", linewidth=2, label="Cost of Living")
+    ax1.plot(years, income, "-o", linewidth=2, label="Avg Monthly Income")
+    ax1.plot(years, cost, "-x", linewidth=2, label="Cost of Living")
 
-    plt.grid(True)
-    plt.title("Average Trends: Income vs. Cost of Living")
-    plt.xlabel("Year")
-    plt.ylabel("Amount (USD)")
-    plt.legend(loc="best")
+    ax1.set_title("Average Trends: Income vs. Cost of Living")
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel("Amount (USD)")
+    ax1.grid(True)
+    ax1.legend(loc="best")
 
     out_path1 = os.path.join(out_dir, "Income_vs_Cost_Trend.png")
-    plt.savefig(out_path1, dpi=300, bbox_inches="tight")
-    plt.close()
+    fig1.savefig(out_path1, dpi=300, bbox_inches="tight")
 
-       # ---------------------------------------------------
+    # ---------------------------------------------------
     # 4. Visualization 2: Stacked Percentage Breakdown
     # ---------------------------------------------------
+    fig2, ax2 = plt.subplots(figsize=(12, 6))
+
     percentage_df = df_avg[
         [
             "Housing_Cost_Percentage",
@@ -94,32 +93,21 @@ def main():
         "Transportation"
     ]
 
-    plt.figure(figsize=(12, 6))
-
-    # Start with zero baseline
     bottom = None
 
     for i, col in enumerate(percentage_df.columns):
-        plt.bar(
-            years,
-            percentage_df[col],
-            bottom=bottom,
-            label=legend_names[i]
-        )
+        ax2.bar(years, percentage_df[col], bottom=bottom, label=legend_names[i])
+        bottom = percentage_df[col] if bottom is None else bottom + percentage_df[col]
 
-        # Update cumulative total for next layer
-        if bottom is None:
-            bottom = percentage_df[col]
-        else:
-            bottom = bottom + percentage_df[col]
-
-    plt.grid(True)
-    plt.title("Average Cost of Living Breakdown by Year")
-    plt.xlabel("Year")
-    plt.ylabel("Percentage of Income (%)")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    ax2.set_title("Average Cost of Living Breakdown by Year")
+    ax2.set_xlabel("Year")
+    ax2.set_ylabel("Percentage of Income (%)")
+    ax2.grid(True)
+    ax2.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     out_path2 = os.path.join(out_dir, "Cost_Breakdown_Stacked.png")
-    plt.savefig(out_path2, dpi=300, bbox_inches="tight")
-    plt.close()
+    fig2.savefig(out_path2, dpi=300, bbox_inches="tight")
 
+    st.success("✅ Regional Cost of Living plots completed.")
+
+    return fig1, fig2
