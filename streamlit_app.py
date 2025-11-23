@@ -29,24 +29,24 @@ except Exception as e:
 
 
 # ──────────────────────────────────────────────
-# ADD python_files/ TO SYSTEM PATH
+# ADD python_files/ TO PATH
 # ──────────────────────────────────────────────
 sys.path.append("python_files")
 st.write("➡️ Added `python_files/` to system path.")
 
 
 # ──────────────────────────────────────────────
-# IMPORT MODULES (UPDATED — CORRECT FILENAMES)
+# IMPORT MODULES
 # ──────────────────────────────────────────────
-st.subheader("🔄 Importing Python Data Modules")
+st.subheader("🔄 Importing Data Cleaning Modules")
 
 modules = {
-    "Macroeconomic Factors":           "Annual_Macroeconomic_Factors",
-    "Housing Data":                    "Housing",
-    "Population Report":               "Population_report",
-    "Homelessness Trend":              "HomelessYears",
-    "Housing & Macroeconomic Factors": "Housing_Macroeconomic_Factors",
-    "Regional Cost of Living":         "Regional_Cost_of_Living"
+    "Macroeconomic Factors":  "Annual_Macroeconomic_Factors",
+    "Housing":                "Housing",
+    "Population Report":      "Population_report",
+    "Homelessness Trend":     "HomelessYears",
+    "Housing Macroeconomic Factors": "Housing_Macroeconomic_Factors",
+    "Regional Cost of Living": "Regional_Cost_of_Living"
 }
 
 loaded_modules = {}
@@ -62,7 +62,7 @@ for label, module_name in modules.items():
 
 
 # ──────────────────────────────────────────────
-# CHECK THAT ALL REQUIRED EXCEL FILES EXIST
+# CHECK XLSX DATA FILES
 # ──────────────────────────────────────────────
 st.subheader("📊 Checking Required Excel Data Files")
 
@@ -83,7 +83,7 @@ for file in data_files:
 
 
 # ──────────────────────────────────────────────
-# RUN main() FOR EACH PYTHON SCRIPT
+# RUN EACH MODULE'S main() FUNCTION
 # ──────────────────────────────────────────────
 st.subheader("▶️ Running Data Cleaning Scripts")
 
@@ -92,22 +92,13 @@ for label, module in loaded_modules.items():
 
     if hasattr(module, "main"):
         try:
-            # Redirect script print() output to Streamlit
-            with st.capture_output() as captured:
-                module.main()
-
+            module.main()
             st.success(f"✓ Finished running `{label}`")
-
-            # Display the captured print() output
-            if captured:
-                st.code(str(captured))
-
         except Exception as e:
-            st.error(f"❌ Error while running `{label}`")
+            st.error(f"❌ Error in `{label}` during execution")
             st.code(traceback.format_exc())
-
     else:
-        st.warning(f"⚠️ `{label}` has no main() function")
+        st.warning(f"⚠️ Module `{label}` has no main() function")
 
 
 st.success("🎉 All Systems Complete — Check output folder for results!")
